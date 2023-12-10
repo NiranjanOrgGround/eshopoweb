@@ -1,219 +1,57 @@
-name: eShopOnWeb
+name: .NET Core
 
 on:
-  workflow_dispatch:
   push:
-    branches: ['master']
+    branches: [ main ]
   pull_request:
-    branches: ['master']
+    branches: [ main ]
 
 jobs:
   build:
-    defaults:
-      run:
-        shell: bash
-        working-directory: ./src/Web
-        
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v4.1.1
 
-      - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v3.2.0
-        with:
-          dotnet-version: '7.0.x'
-
-      - name: Restore
-        run: dotnet restore
-      
-      - name: Build and Test
-        run: dotnet test --configuration release 
-      
-      - name: Publish
-        run: dotnet publish --configuration release
-
-      - name: 📤 Upload Build Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: eshop-artifact
-          path: ./src/Web/bin/release/net7.0/publish
-          
-  analyze:
-    name: Analyze
-    needs: build
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
-    timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'csharp', 'javascript-typescript' ]
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
-      with:
-        languages: ${{ matrix.language }}
-
-    - if: matrix.language == 'csharp'
-      name: Build C#
-      run: |
-        dotnet build src/Web/Web.csproj
-        
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
-      with:
-        category: "/language:${{matrix.language}}"
-
-  terraform:
-    name: 'Terraform'
-    needs: ['build', 'analyze']
     runs-on: ubuntu-latest
 
-    env:
-      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-      AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
-      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
-        
-    defaults:
-      run:
-        shell: bash
-        working-directory: ./terraform
-
-    permissions:
-      pull-requests: write
-
-    outputs:
-      PUBLIC_IP: ${{ steps.public_id.outputs.PUBLIC_IP }}
-    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4.1.1
-    
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-    
-      # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
-      - name: Terraform Init
-        id: init
-        run: terraform init
+    - uses: actions/checkout@v3
 
-      - name: Terraform Validate
-        id: validate
-        run: terraform validate -no-color
-    
-      # Run a terraform plan for pull requests only
-      - name: Terraform Plan
-        id: plan
-        if: github.event_name == 'pull_request'
-        run: terraform plan -no-color
-        continue-on-error: true
-
-      # On push to main, build or change infrastructure according to Terraform configuration files
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        run: terraform apply -auto-approve
-
-      # - name: Getting public ip address
-      #   if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-      #   id: public_id
-      #   run: echo "PUBLIC_IP=$(terraform output instance_public_ip)" >> $GITHUB_OUTPUT
-
-  deploy:
-    name: deploy artifact
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    needs: ['build', 'terraform']
-    environment: 
-      name: deploy
-    steps:
-    - name: Download artifact from build job
-      uses: actions/download-artifact@v3
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
       with:
-        name: eshop-artifact
-        path: ./eshop-artifact
-          
-    # - name: copy file to ec2-server
-    #   uses: appleboy/scp-action@v0.1.4
-    #   with:
-    #     host: '13.51.86.159'
-    #     username: 'ec2-user'
-    #     key: ${{ secrets.SSH_PRIVATE_KEY }}
-    #     port: '22'
-    #     source: ./eshop-artifact/Web.dll
-    #     target: /home/ec2-user/publish
-
-    # - name: copy artifacts to ec2-server
-    #   uses: Hermanverschooten/ssh-copy-command-action@v1
-    #   env:
-    #     SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-    #     SOURCE: "/home/runner/work/eShop/eShop/eshop-artifact/Web.dll"
-    #     REMOTE_HOST: '13.51.86.159'
-    #     REMOTE_USER: 'root'
-    #     TARGET: "/home/ec2-user/publish"
-    #     CMD: "sudo systemctl enable myeshop.service && sudo systemctl start myeshop.service"
-
-    # - name: Set up SSH key
-    #   run: |
-    #     mkdir -p ~/.ssh
-    #     echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-    #     chmod 600 ~/.ssh/id_rsa
-    #     ssh-keyscan -t ed25519 13.51.86.159 >> ~/.ssh/known_hosts
-    #   env:
-    #     SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-    #     REMOTE_SERVER_IP: 13.51.86.159
-
-    - name: Check and adjust file permissions
-      run: |
-        chmod +r /home/runner/work/eShop/eShop/eshop-artifact
-        chmod +rx /home/runner/work/eShop/eShop/eshop-artifact
-
-    # - name: Create remote directory if not exists
-    #   run: |
-    #     ssh user@13.51.86.159 "mkdir -p /home/ec2-user/publish/"
-
-    - name: Copy files to remote server
-      run: |
-        scp /home/runner/work/eShop/eShop/eshop-artifact user@13.51.86.159:/root/
-
-    - name: Run remote commands
-      run: |
-        ssh user@13.51.86.159 "sudo systemctl enable myeshop.service && sudo systemctl start myeshop.service"
-
-    # - name: Debugging Info
-    #   run: |
-    #     echo "SSH_PRIVATE_KEY: $SSH_PRIVATE_KEY"
-    #     echo "SOURCE: $SOURCE"
-    #     echo "REMOTE_HOST: $REMOTE_HOST"
-    #     echo "REMOTE_USER: $REMOTE_USER"
-    #     echo "TARGET: $TARGET"
-    #     echo "CMD: $CMD"
-
-    # - name: List Files Before Copy
-    #   run: ls -al
+        dotnet-version: '7.x'
     
-    # - name: copy artifacts to ec2-server
-    #   uses: Hermanverschooten/ssh-copy-command-action@v1
-    #   env:
-    #     SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-    #     SOURCE: "/home/runner/work/eShop/eShop/eshop-artifact/Web.dll"
-    #     REMOTE_HOST: '13.51.86.159'
-    #     REMOTE_USER: 'ec2-user'
-    #     TARGET: "/home/ec2-user/publish"
-    #     CMD: "sudo systemctl enable myeshop.service && sudo systemctl start myeshop.service"
-
-
+    - name: Restore dependencies
+      run: dotnet restore
     
-      
-
+    - name: Build
+      run: dotnet build --no-restore
+    
+    - name: Test
+      run: dotnet test --no-build --verbosity normal
+    
+    - name: Publish Unit Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v1
+      if: always()
+      with:
+        files: ./TestResults/*.trx
+    
+    - name: Step Summary for Test Cases
+      uses: actions/github-script@v5
+      with:
+        script: |
+          const fs = require('fs');
+          let summary = '';
+          const testResults = fs.readdirSync('./TestResults').filter(fn => fn.endsWith('.trx'));
+          for (const fn of testResults) {
+            const content = fs.readFileSync(`./TestResults/${fn}`, 'utf8');
+            // parse content and create summary
+          }
+          console.log(summary);
+    
+    - name: Publish
+      run: dotnet publish -c Release -o ${{ github.workspace }}/publish
+    
+    - name: Upload the artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: artifact-${{ github.run_number }}
+        path: ${{ github.workspace }}/publish/*
