@@ -28,10 +28,10 @@ jobs:
       working-directory: 'src/Web'
     
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --logger trx
       working-directory: 'tests/UnitTests'
 
-    - run: ls -la
+    - run: tree
     
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2.11.0
