@@ -9,10 +9,6 @@ on:
 jobs:
   build:
 
-    defaults:
-      run:
-        working-directory: ./src/Web/
-
     runs-on: ubuntu-latest
 
     steps:
