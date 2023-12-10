@@ -37,11 +37,11 @@ jobs:
 
     - run: ls -la
     
-    - name: Publish Unit Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v2.11.0
-      if: always()
-      with:
-        files: ./TestResults/*.trx
+    # - name: Publish Unit Test Results
+    #   uses: EnricoMi/publish-unit-test-result-action@v2.11.0
+    #   if: always()
+    #   with:
+    #     files: ./TestResults/*.trx
     
     - name: Step Summary for Test Cases
       uses: actions/github-script@v5
