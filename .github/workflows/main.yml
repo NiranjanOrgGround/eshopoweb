@@ -25,34 +25,36 @@ jobs:
     
     - name: Restore dependencies
       run: dotnet restore
+      working-directory: 'src/Web'
     
     - name: Build
       run: dotnet build --no-restore
+      working-directory: 'src/Web'
     
     - name: Test
       run: dotnet test --no-build --verbosity normal
       working-directory: 'tests/UnitTests'
-    
-    # - name: Publish Unit Test Results
-    #   uses: EnricoMi/publish-unit-test-result-action@v2.11.0
-    #   if: always()
-    #   with:
-    #     files: ./TestResults/*.trx
 
     - run: ls -la
     
-    # - name: Step Summary for Test Cases
-    #   uses: actions/github-script@v5
-    #   with:
-    #     script: |
-    #       const fs = require('fs');
-    #       let summary = '';
-    #       const testResults = fs.readdirSync('./TestResults').filter(fn => fn.endsWith('.trx'));
-    #       for (const fn of testResults) {
-    #         const content = fs.readFileSync(`./TestResults/${fn}`, 'utf8');
-    #         // parse content and create summary
-    #       }
-    #       console.log(summary);
+    - name: Publish Unit Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2.11.0
+      if: always()
+      with:
+        files: ./TestResults/*.trx
+    
+    - name: Step Summary for Test Cases
+      uses: actions/github-script@v5
+      with:
+        script: |
+          const fs = require('fs');
+          let summary = '';
+          const testResults = fs.readdirSync('./TestResults').filter(fn => fn.endsWith('.trx'));
+          for (const fn of testResults) {
+            const content = fs.readFileSync(`./TestResults/${fn}`, 'utf8');
+            // parse content and create summary
+          }
+          console.log(summary);
     
     - name: Publish
       run: dotnet publish -c Release -o ${{ github.workspace }}/publish
