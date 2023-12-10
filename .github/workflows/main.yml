@@ -47,9 +47,9 @@ jobs:
         script: |
           const fs = require('fs');
           let summary = '';
-          const testResults = fs.readdirSync('**/TestResults').filter(fn => fn.endsWith('.trx'));
+          const testResults = fs.readdirSync('./tests/UnitTests/TestResults').filter(fn => fn.endsWith('.trx'));
           for (const fn of testResults) {
-            const content = fs.readFileSync(`**/TestResults/${fn}`, 'utf8');
+            const content = fs.readFileSync(`./tests/UnitTests/TestResults/${fn}`, 'utf8');
             // parse content and create summary
           }
           console.log(summary);
