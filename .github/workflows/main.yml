@@ -30,8 +30,7 @@ jobs:
       working-directory: 'src/Web'
     
     - name: Test
-      run: dotnet test --logger trx
-      working-directory: 'tests/UnitTests'
+      run: dotnet test ./tests/**/*.csproj --logger trx 
 
     - run: tree
     
