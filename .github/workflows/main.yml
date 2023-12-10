@@ -30,9 +30,8 @@ jobs:
       working-directory: 'src/Web'
     
     - name: Test
-      run: dotnet test ./tests/**/*.csproj --logger trx 
-
-    - run: tree
+      run: dotnet test --logger trx
+      working-directory: 'tests/UnitTests'
     
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2.11.0
