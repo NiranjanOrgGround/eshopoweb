@@ -42,7 +42,7 @@ jobs:
         files: '**/TestResults/*.trx'
     
     - name: Step Summary for Test Cases
-      uses: actions/github-script@v5
+      uses: actions/github-script@v7
       with:
         script: |
           const fs = require('fs');
